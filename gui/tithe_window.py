@@ -44,13 +44,24 @@ class TitheWindow(QMainWindow):
 
         self.table.setRowCount(0)
         for t in tithes:
-            month_name = datetime.strptime(str(t["tithe_month"]), "%Y-%m-%d").strftime("%B")
+            # Convert tithe_month (a DATE field) → month name
+            if t["tithe_month"]:
+                try:
+                    # Handle MySQL date object or string
+                    if isinstance(t["tithe_month"], str):
+                        month_name = datetime.strptime(t["tithe_month"], "%Y-%m-%d").strftime("%B")
+                    else:
+                        month_name = t["tithe_month"].strftime("%B")
+                except Exception:
+                    month_name = str(t["tithe_month"])
+            else:
+                month_name = "Unknown"
 
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(str(t["tithe_id"])))
             self.table.setItem(row, 1, QTableWidgetItem(month_name))
-            self.table.setItem(row, 2, QTableWidgetItem(str(t["payment_year"])))
+            self.table.setItem(row, 2, QTableWidgetItem(str(t["tithe_year"])))
             self.table.setItem(row, 3, QTableWidgetItem(f"Rs. {t['amount']:.2f}"))
 
     def open_add_tithe_dialog(self):
@@ -71,23 +82,18 @@ class AddTitheDialog(QDialog):
         self.amount_input = QLineEdit()
         self.amount_input.setPlaceholderText("Enter total amount")
 
-        # Year selector
+        # --- Year Selector ---
         self.year_select = QComboBox()
         current_year = QDate.currentDate().year()
         for y in range(current_year, current_year - 5, -1):
             self.year_select.addItem(str(y))
+        self.year_select.currentTextChanged.connect(self.refresh_months_list)
 
-        # Month multi-select
+        # --- Month Multi-Select ---
         self.month_list = QListWidget()
         self.month_list.setSelectionMode(QAbstractItemView.MultiSelection)
-        months = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ]
-        for m in months:
-            self.month_list.addItem(QListWidgetItem(m))
 
-        # Buttons
+        # --- Buttons ---
         self.submit_btn = QPushButton("Submit")
         self.submit_btn.clicked.connect(self.save_tithe)
 
@@ -95,8 +101,42 @@ class AddTitheDialog(QDialog):
         layout.addRow("Year:", self.year_select)
         layout.addRow("Select Months:", self.month_list)
         layout.addRow("", self.submit_btn)
-
         self.setLayout(layout)
+
+        # Initialize with current year's available months
+        self.refresh_months_list()
+
+    def refresh_months_list(self):
+        """Load months that are not yet paid for this member and year."""
+        from models.tithe_model import get_tithes_by_member
+
+        year = int(self.year_select.currentText())
+        all_months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+
+        # Get existing tithes
+        existing_tithes = get_tithes_by_member(self.member["member_id"])
+        paid_months = [
+            datetime.strptime(str(t["tithe_month"]), "%Y-%m-%d").strftime("%B")
+            for t in existing_tithes
+            if t["tithe_year"] == year
+        ]
+
+        # Filter unpaid months
+        unpaid_months = [m for m in all_months if m not in paid_months]
+
+        # Populate the list
+        self.month_list.clear()
+        for m in unpaid_months:
+            self.month_list.addItem(QListWidgetItem(m))
+
+        if not unpaid_months:
+            self.month_list.addItem(QListWidgetItem("(All months paid for this year)"))
+            self.month_list.setDisabled(True)
+        else:
+            self.month_list.setDisabled(False)
 
     def save_tithe(self):
         try:
@@ -105,7 +145,7 @@ class AddTitheDialog(QDialog):
             QMessageBox.warning(self, "Input Error", "Please enter a valid amount.")
             return
 
-        selected_months = [item.text() for item in self.month_list.selectedItems()]
+        selected_months = [item.text() for item in self.month_list.selectedItems() if not item.text().startswith("(")]
         if not selected_months:
             QMessageBox.warning(self, "Missing Data", "Please select at least one month.")
             return
@@ -136,6 +176,7 @@ class AddTitheDialog(QDialog):
                 )
                 receipt_dialog = ReceiptDialog("Tithe Receipt", receipt_text)
                 receipt_dialog.exec()
+
             QMessageBox.information(self, "Success", "Tithe added successfully.")
             self.close()
         else:

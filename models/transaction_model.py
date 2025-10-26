@@ -1,37 +1,33 @@
-
-from database.db_connection import get_connection
+import uuid
 from datetime import date
-import app_state  # ✅ Add this line
+import app_state
+from database.db_connection import get_connection
 
 
 def create_transaction(member_id, transaction_type, amount):
     """
     Inserts a new transaction associated with the currently logged-in user.
-    Returns the transaction_id.
+    Returns the transaction_id (UUID string).
     """
     conn = get_connection()
     cursor = conn.cursor()
 
     # get logged-in user ID safely
-    user_id = None
-    if app_state.current_user and "user_id" in app_state.current_user:
-        user_id = app_state.current_user["user_id"]
+    user_id = app_state.current_user.get("user_id", 1) if app_state.current_user else 1
 
-    # Fallback to admin=1 if not found (e.g. running test scripts)
-    if not user_id:
-        user_id = 1
+    # Generate a unique UUID
+    transaction_id = str(uuid.uuid4())
 
     cursor.execute("""
-        INSERT INTO transactions (member_id, transaction_type, user_id, amount, transaction_date)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (member_id, transaction_type, user_id, amount, date.today()))
+        INSERT INTO transactions (transaction_id, member_id, transaction_type, user_id, amount, transaction_date)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (transaction_id, member_id, transaction_type, user_id, amount, date.today()))
 
-    transaction_id = cursor.lastrowid
     conn.commit()
     cursor.close()
     conn.close()
-    return transaction_id
 
+    return transaction_id
 
 def get_all_transactions():
     """Fetch all transactions with member and user info."""

@@ -54,9 +54,9 @@ def add_tithe_payment(member, months, year, monthly_amount):
 
         # Insert tithe record
         cursor.execute("""
-            INSERT INTO tithe (member_id, transaction_id, tithe_month, tithe_year)
-            VALUES (%s, %s, %s, %s)
-        """, (member["member_id"], transaction_id, month_date, year))
+                       INSERT INTO tithe (member_id, transaction_id, tithe_month, tithe_year)
+                       VALUES (%s, %s, %s, %s)
+                       """, (member["member_id"], transaction_id, month_date, year))
 
         added.append({
             "transaction_id": transaction_id,

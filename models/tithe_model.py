@@ -8,6 +8,7 @@ def get_tithes_by_member(member_id):
     cursor.execute("""
         SELECT 
             t.tithe_id,
+            t.transaction_id,
             t.tithe_month,
             t.tithe_year,
             tr.amount
@@ -36,27 +37,24 @@ def add_tithe_payment(member, months, year, monthly_amount):
     added = []
     for month_name in months:
         month_num = month_map[month_name]
-
-        # Build a representative date for the month (first day of that month)
         month_date = date(year, month_num, 1)
 
-        # Check duplicate
+        # Check for duplicates
         cursor.execute("""
             SELECT 1 FROM tithe
             WHERE member_id = %s AND tithe_month = %s AND tithe_year = %s
         """, (member["member_id"], month_date, year))
         if cursor.fetchone():
-            continue  # skip duplicates
+            continue  # skip already paid months
 
-        # Create transaction and store its id
+        # Create transaction (returns auto-increment ID)
         transaction_id = create_transaction(member["member_id"], "tithe", monthly_amount)
-        print("DEBUG Transaction ID:", transaction_id)
 
-        # Insert tithe record
+        # Insert tithe record linked to transaction
         cursor.execute("""
-                       INSERT INTO tithe (member_id, transaction_id, tithe_month, tithe_year)
-                       VALUES (%s, %s, %s, %s)
-                       """, (member["member_id"], transaction_id, month_date, year))
+            INSERT INTO tithe (member_id, transaction_id, tithe_month, tithe_year)
+            VALUES (%s, %s, %s, %s)
+        """, (member["member_id"], transaction_id, month_date, year))
 
         added.append({
             "transaction_id": transaction_id,

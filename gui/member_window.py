@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QPushButton, QMenu
 from models.member_model import search_member_by_name, add_member, get_all_members, search_member_by_id
 # from gui.membership_window import TitheWindow
 from gui.membership_window import MembershipWindow
+from gui.donation_window import DonationWindow
 
 class MemberWindow(QMainWindow):
     def __init__(self):
@@ -119,8 +120,8 @@ class MemberWindow(QMainWindow):
         menu = QMenu()
         menu.addAction("Membership", lambda: self.open_membership_window(member))
         menu.addAction("Tithe", lambda: self.open_tithe_window(member))
-        menu.addAction("Donation", lambda: print("Open Donation Window"))
-        menu.addAction("Thanksgiving", lambda: print("Open Thanksgiving Window"))
+        menu.addAction("Donation", lambda: self.open_donation_window(member))
+        menu.addAction("Thanksgiving", lambda: self.open_thanksgiving_window(member))
         menu.exec()
 
     def open_membership_window(self, member):
@@ -141,6 +142,15 @@ class MemberWindow(QMainWindow):
         if dialog.exec():
             self.load_all_members()  # refresh after adding new member
 
+    def open_donation_window(self, member):
+        from gui.donation_window import DonationWindow
+        self.donation_window = DonationWindow(member)
+        self.donation_window.show()
+
+    def open_thanksgiving_window(self, member):
+        from gui.thanksgiving_window import ThanksgivingWindow
+        self.thanksgiving_window = ThanksgivingWindow(member)
+        self.thanksgiving_window.show()
 
 # ---------------- ADD MEMBER DIALOG ----------------
 class AddMemberDialog(QDialog):

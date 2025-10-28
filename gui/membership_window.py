@@ -43,13 +43,27 @@ class MembershipWindow(QMainWindow):
         self.load_membership()
 
     def load_membership(self):
+        """Load all membership records for this member and display them."""
         membership = get_memberships_by_member(self.member["member_id"])
         self.table.setRowCount(0)
+
+        # Add a Transaction ID column
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Transaction ID", "Amount", "Month", "Transaction Date"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
         for i, t in enumerate(membership):
             self.table.insertRow(i)
-            self.table.setItem(i, 0, QTableWidgetItem(str(t["amount"])))
-            self.table.setItem(i, 1, QTableWidgetItem(str(t["payment_period"])))
-            self.table.setItem(i, 2, QTableWidgetItem(str(t["transaction_date"])))
+
+            transaction_id = str(t.get("transaction_id", "N/A"))
+            amount = str(t.get("amount", "0"))
+            payment_period = str(t.get("payment_period", "Unknown"))
+            transaction_date = str(t.get("transaction_date", "Unknown"))
+
+            self.table.setItem(i, 0, QTableWidgetItem(transaction_id))
+            self.table.setItem(i, 1, QTableWidgetItem(amount))
+            self.table.setItem(i, 2, QTableWidgetItem(payment_period))
+            self.table.setItem(i, 3, QTableWidgetItem(transaction_date))
 
     def open_add_membership_dialog(self):
         dialog = AddMembershipDialog(self.member)

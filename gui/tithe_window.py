@@ -43,11 +43,14 @@ class TitheWindow(QMainWindow):
         tithes = get_tithes_by_member(self.member["member_id"])
 
         self.table.setRowCount(0)
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["Tithe ID", "Transaction ID", "Month", "Year", "Amount"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
         for t in tithes:
             # Convert tithe_month (a DATE field) → month name
             if t["tithe_month"]:
                 try:
-                    # Handle MySQL date object or string
                     if isinstance(t["tithe_month"], str):
                         month_name = datetime.strptime(t["tithe_month"], "%Y-%m-%d").strftime("%B")
                     else:
@@ -57,12 +60,15 @@ class TitheWindow(QMainWindow):
             else:
                 month_name = "Unknown"
 
+            transaction_id = str(t.get("transaction_id", "N/A"))
+
             row = self.table.rowCount()
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(str(t["tithe_id"])))
-            self.table.setItem(row, 1, QTableWidgetItem(month_name))
-            self.table.setItem(row, 2, QTableWidgetItem(str(t["tithe_year"])))
-            self.table.setItem(row, 3, QTableWidgetItem(f"Rs. {t['amount']:.2f}"))
+            self.table.setItem(row, 1, QTableWidgetItem(transaction_id))
+            self.table.setItem(row, 2, QTableWidgetItem(month_name))
+            self.table.setItem(row, 3, QTableWidgetItem(str(t["tithe_year"])))
+            self.table.setItem(row, 4, QTableWidgetItem(f"Rs. {t['amount']:.2f}"))
 
     def open_add_tithe_dialog(self):
         dialog = AddTitheDialog(self.member)

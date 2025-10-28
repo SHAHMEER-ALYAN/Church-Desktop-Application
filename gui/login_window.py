@@ -47,11 +47,11 @@ class LoginWindow(QMainWindow):
             self.main_window.show()
             self.close()
 
-            if username == "admin" and password == "admin":
-                from gui.login_window import current_user
-                current_user["user_id"] = 1
-                current_user["username"] = "admin"
-                self.open_main_window()
+            # if username == "admin" and password == "admin":
+            #     from gui.login_window import current_user
+            #     current_user["user_id"] = 1
+            #     current_user["username"] = "admin"
+            #     self.main_window.show()
 
         else:
             QMessageBox.warning(self, "Login Failed", "Invalid username or password.")

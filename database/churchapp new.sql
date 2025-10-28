@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 26, 2025 at 07:53 PM
+-- Generation Time: Oct 28, 2025 at 02:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,8 +44,18 @@ CREATE TABLE `donation` (
   `donation_id` int(11) NOT NULL,
   `transaction_id` varchar(36) DEFAULT NULL,
   `member_id` int(11) DEFAULT NULL,
-  `purpose` varchar(255) DEFAULT NULL
+  `donation_type` enum('general','building','charity','event','special','youth','mission','other') DEFAULT 'general',
+  `donation_date` date NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `comment` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `donation`
+--
+
+INSERT INTO `donation` (`donation_id`, `transaction_id`, `member_id`, `donation_type`, `donation_date`, `amount`, `comment`) VALUES
+(1, 'd5a53c5a-7346-43b0-845b-896a56aca0b2', 1, 'general', '2025-10-28', 5000.00, 'This is test donation');
 
 -- --------------------------------------------------------
 
@@ -123,7 +133,8 @@ INSERT INTO `membership` (`membership_id`, `transaction_id`, `member_id`, `payme
 (4, '3c560e6e-2afb-40ec-9693-30d822e87849', 1, '2025-04-01', 2025),
 (5, '6faf58ee-abf3-4cb9-b109-3e2430a3fc1c', 1, '2025-05-01', 2025),
 (6, 'ea54026a-ba05-4649-821d-ee3b1918db49', 1, '2025-06-01', 2025),
-(7, '9760b443-3326-42d6-8bae-3dae3dcf2e25', 1, '2025-07-01', 2025);
+(7, '9760b443-3326-42d6-8bae-3dae3dcf2e25', 1, '2025-07-01', 2025),
+(8, 'cb0d9532-4f40-4df8-92d7-372777031d36', 1, '2025-08-01', 2025);
 
 -- --------------------------------------------------------
 
@@ -146,10 +157,19 @@ CREATE TABLE `parking` (
 
 CREATE TABLE `thanksgiving` (
   `thanksgiving_id` int(11) NOT NULL,
-  `transaction_id` varchar(36) DEFAULT NULL,
   `member_id` int(11) DEFAULT NULL,
-  `purpose` varchar(255) DEFAULT NULL
+  `transaction_id` varchar(36) DEFAULT NULL,
+  `purpose` varchar(255) DEFAULT NULL,
+  `comment` text DEFAULT NULL,
+  `date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `thanksgiving`
+--
+
+INSERT INTO `thanksgiving` (`thanksgiving_id`, `member_id`, `transaction_id`, `purpose`, `comment`, `date`) VALUES
+(1, 1, 'eb91c09d-6806-4d29-b213-e59aee59c143', 'General Thanksgiving', 'test thanksgiving', '2025-10-28');
 
 -- --------------------------------------------------------
 
@@ -171,7 +191,8 @@ CREATE TABLE `tithe` (
 
 INSERT INTO `tithe` (`tithe_id`, `transaction_id`, `member_id`, `tithe_month`, `tithe_year`) VALUES
 (2, '8e72bfea-5c6d-41a4-8db2-ee6665eabacd', 3, '2025-01-01', 2025),
-(3, 'b3535f1b-54d3-44f3-b3ec-02d044485108', 3, '2025-02-01', 2025);
+(3, 'b3535f1b-54d3-44f3-b3ec-02d044485108', 3, '2025-02-01', 2025),
+(4, '776cc671-110f-4804-96e2-dfccdf6c93b7', 1, '2025-01-01', 2025);
 
 -- --------------------------------------------------------
 
@@ -199,12 +220,16 @@ INSERT INTO `transactions` (`transaction_id`, `member_id`, `user_id`, `transacti
 ('3c560e6e-2afb-40ec-9693-30d822e87849', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 04:09:09', '2025-10-26 04:09:09'),
 ('40413ab8-0291-4e37-bc8d-d478714e8e74', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 03:49:50', '2025-10-26 03:49:50'),
 ('6faf58ee-abf3-4cb9-b109-3e2430a3fc1c', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 04:10:52', '2025-10-26 04:10:52'),
+('776cc671-110f-4804-96e2-dfccdf6c93b7', 1, 1, 'tithe', 8000.00, '2025-10-28', '2025-10-28 16:04:57', '2025-10-28 16:04:57'),
 ('8e72bfea-5c6d-41a4-8db2-ee6665eabacd', 3, 1, 'tithe', 500.00, '2025-10-26', '2025-10-26 11:27:52', '2025-10-26 11:27:52'),
 ('961ef976-2600-4809-a556-f6b912a81b29', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 03:49:50', '2025-10-26 03:49:50'),
 ('9760b443-3326-42d6-8bae-3dae3dcf2e25', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 04:17:59', '2025-10-26 04:17:59'),
 ('acd73ccd-562b-41e8-89c0-9f402bb3b67e', NULL, 1, 'expense', -1000.00, '2025-10-26', '2025-10-26 06:12:40', '2025-10-26 06:12:40'),
 ('b3535f1b-54d3-44f3-b3ec-02d044485108', 3, 1, 'tithe', 500.00, '2025-10-26', '2025-10-26 11:43:14', '2025-10-26 11:43:14'),
-('ea54026a-ba05-4649-821d-ee3b1918db49', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 04:13:56', '2025-10-26 04:13:56');
+('cb0d9532-4f40-4df8-92d7-372777031d36', 1, 1, 'membership', 1000.00, '2025-10-28', '2025-10-28 16:00:29', '2025-10-28 16:00:29'),
+('d5a53c5a-7346-43b0-845b-896a56aca0b2', 1, 1, 'donation', 5000.00, '2025-10-28', '2025-10-28 16:57:12', '2025-10-28 16:57:12'),
+('ea54026a-ba05-4649-821d-ee3b1918db49', 1, 1, 'membership', 1000.00, '2025-10-26', '2025-10-26 04:13:56', '2025-10-26 04:13:56'),
+('eb91c09d-6806-4d29-b213-e59aee59c143', 1, 1, 'thanksgiving', 500.00, '2025-10-28', '2025-10-28 17:53:15', '2025-10-28 17:53:15');
 
 -- --------------------------------------------------------
 
@@ -312,8 +337,8 @@ ALTER TABLE `parking`
 --
 ALTER TABLE `thanksgiving`
   ADD PRIMARY KEY (`thanksgiving_id`),
-  ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `member_id` (`member_id`);
+  ADD KEY `member_id` (`member_id`),
+  ADD KEY `transaction_id` (`transaction_id`);
 
 --
 -- Indexes for table `tithe`
@@ -352,7 +377,7 @@ ALTER TABLE `bag_offering`
 -- AUTO_INCREMENT for table `donation`
 --
 ALTER TABLE `donation`
-  MODIFY `donation_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `donation_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `expenses`
@@ -370,7 +395,7 @@ ALTER TABLE `members`
 -- AUTO_INCREMENT for table `membership`
 --
 ALTER TABLE `membership`
-  MODIFY `membership_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `membership_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `parking`
@@ -382,13 +407,13 @@ ALTER TABLE `parking`
 -- AUTO_INCREMENT for table `thanksgiving`
 --
 ALTER TABLE `thanksgiving`
-  MODIFY `thanksgiving_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `thanksgiving_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `tithe`
 --
 ALTER TABLE `tithe`
-  MODIFY `tithe_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `tithe_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -438,8 +463,8 @@ ALTER TABLE `parking`
 -- Constraints for table `thanksgiving`
 --
 ALTER TABLE `thanksgiving`
-  ADD CONSTRAINT `thanksgiving_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `thanksgiving_ibfk_2` FOREIGN KEY (`member_id`) REFERENCES `members` (`member_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `thanksgiving_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `members` (`member_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `thanksgiving_ibfk_2` FOREIGN KEY (`transaction_id`) REFERENCES `transactions` (`transaction_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `tithe`

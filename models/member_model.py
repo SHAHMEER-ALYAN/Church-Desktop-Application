@@ -84,3 +84,13 @@ def search_member_by_card_number(card_no):
     cursor.close()
     conn.close()
     return members
+
+def get_member_by_id(member_id):
+    """Fetch a single member by their ID and return as a dictionary."""
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM members WHERE member_id = %s", (member_id,))
+    member = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return member

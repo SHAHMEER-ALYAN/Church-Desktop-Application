@@ -78,15 +78,18 @@ class ExpenseWindow(QMainWindow):
 
     def save_expense(self):
         expense_type = self.type_combo.currentText()
-        amount = self.amount_input.text().strip()
+        amount_text = self.amount_input.text().strip()
         receipt = self.receipt_input.text().strip()
         comments = self.comments_input.toPlainText().strip()
 
-        if not amount or not amount.replace('.', '', 1).isdigit():
+        # --- Validate amount ---
+        if not amount_text or not amount_text.replace('.', '', 1).isdigit():
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid amount.")
             return
 
-        success, transaction_id = add_expense(expense_type, float(amount), receipt, comments)
+        amount = float(amount_text)  # ✅ Convert to float
+
+        success, transaction_id = add_expense(expense_type, amount, receipt, comments)
         if success:
             receipt_text = (
                 f"--- CHURCH MANAGEMENT SYSTEM ---\n"
@@ -94,7 +97,7 @@ class ExpenseWindow(QMainWindow):
                 f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                 f"Transaction Type: Expense\n"
                 f"Expense Category: {expense_type}\n"
-                f"Amount: -Rs. {abs(amount)}\n"
+                f"Amount: -Rs. {abs(amount):.2f}\n"  # ✅ abs() now works correctly
                 f"Receipt #: {receipt}\n"
                 f"Comments: {comments}\n"
                 f"Entered By: {app_state.current_user['full_name']}\n"
@@ -103,3 +106,4 @@ class ExpenseWindow(QMainWindow):
             )
             receipt_dialog = ReceiptDialog("Expense Receipt", receipt_text)
             receipt_dialog.exec()
+            self.load_expenses()

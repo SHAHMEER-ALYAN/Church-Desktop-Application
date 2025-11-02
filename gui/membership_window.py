@@ -148,11 +148,29 @@ class AddMembershipDialog(QDialog):
 
         total_amount = float(total_amount_text)
 
-        # Validate amount evenly divides by months
+        # ✅ Validate amount evenly divides across months
         if total_amount % len(months) != 0:
-            QMessageBox.warning(self, "Amount Error", "The amount must divide evenly across selected months.")
+            QMessageBox.warning(self, "Amount Error", "The total amount must divide evenly across selected months.")
             return
 
+        # ✅ Double-check that selected months aren't already paid (safety check)
+        paid_months = get_paid_months_for_member(self.member['member_id'], year)
+        month_map = {
+            "January": 1, "February": 2, "March": 3, "April": 4,
+            "May": 5, "June": 6, "July": 7, "August": 8,
+            "September": 9, "October": 10, "November": 11, "December": 12
+        }
+
+        already_paid = [m for m in months if month_map[m] in paid_months]
+        if already_paid:
+            QMessageBox.warning(
+                self,
+                "Duplicate Month(s)",
+                f"The following month(s) are already paid:\n\n{', '.join(already_paid)}"
+            )
+            return
+
+        # ✅ If all checks pass, proceed
         success, data = add_membership_payment(self.member['member_id'], months, year, total_amount)
 
         if success:
@@ -171,3 +189,8 @@ class AddMembershipDialog(QDialog):
                 )
                 receipt_dialog = ReceiptDialog("Membership Receipt", receipt_text)
                 receipt_dialog.exec()
+
+            QMessageBox.information(self, "Success", "Membership payment(s) added successfully!")
+            self.accept()
+        else:
+            QMessageBox.warning(self, "Error", "Unable to add membership record.")

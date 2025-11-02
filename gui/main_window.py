@@ -5,6 +5,7 @@ from PySide6.QtCore import QSize, Qt
 from gui.add_transaction_window import AddTransactionWindow
 from gui.member_window import MemberWindow
 from gui.transaction_view_window import TransactionViewWindow
+from datetime import datetime
 import app_state
 
 
@@ -68,15 +69,17 @@ class MainWindow(QMainWindow):
 
     def open_tithe_window(self):
         from gui.tithe_window import TitheWindow
-        self.tithe_window = TitheWindow({"member_id": None, "first_name": "All", "last_name": "Members"})
+        self.tithe_window = TitheWindow()  # no member
         self.tithe_window.show()
 
     def open_donation_window(self):
-        self.donation_window = AddTransactionWindow("donation")
+        from gui.donation_window import DonationWindow
+        self.donation_window = DonationWindow()  # no member
         self.donation_window.show()
 
     def open_bag_offering_window(self):
-        self.bag_offering_window = AddTransactionWindow("bag_offering")
+        from gui.bag_offering_window import BagOfferingWindow
+        self.bag_offering_window = BagOfferingWindow()
         self.bag_offering_window.show()
 
     def open_expense_window(self):
@@ -85,11 +88,13 @@ class MainWindow(QMainWindow):
         self.expense_window.show()
 
     def open_thanksgiving_window(self):
-        self.thanksgiving_window = AddTransactionWindow("thanksgiving")
+        from gui.thanksgiving_window import ThanksgivingWindow
+        self.thanksgiving_window = ThanksgivingWindow()  # no member
         self.thanksgiving_window.show()
 
     def open_parking_window(self):
-        self.parking_window = AddTransactionWindow("parking")
+        from gui.parking_window import ParkingWindow
+        self.parking_window = ParkingWindow()
         self.parking_window.show()
 
     def open_transaction_view(self):
@@ -97,4 +102,7 @@ class MainWindow(QMainWindow):
         self.transaction_window.show()
 
     def open_backup_window(self):
-        QMessageBox.information(self, "Backup", "Database backup started (feature coming soon).")
+        from gui.backup_window import BackupWindow
+        self.backup_window = BackupWindow()
+        self.backup_window.show()
+

@@ -59,39 +59,33 @@ def get_filtered_transactions(year, month, tr_type, exp_type):
     cursor = conn.cursor(dictionary=True)
 
     query = """
-            SELECT t.transaction_id, \
-                   t.transaction_date, \
-                   t.transaction_type, \
-                   t.amount, \
-                   m.first_name                                AS member_name, \
-                   u.full_name                                 AS user_name, \
-                   COALESCE(e.comments, d.comment, th.comment) AS comments, \
-                   COALESCE(e.expense_type, d.purpose, 'N/A')  AS detail
-            FROM transactions t
-                     LEFT JOIN members m ON t.member_id = m.member_id
-                     LEFT JOIN users u ON t.user_id = u.user_id
-                     LEFT JOIN expenses e ON t.transaction_id = e.transaction_id
-                     LEFT JOIN donation d ON t.transaction_id = d.transaction_id
-                     LEFT JOIN thanksgiving th ON t.transaction_id = th.transaction_id
-            WHERE 1 = 1 \
-            """
+    SELECT 
+        t.transaction_id, t.transaction_date, t.transaction_type, t.amount,
+        m.first_name AS member_name, u.full_name AS user_name,
+        COALESCE(e.comments, d.comment, th.comment, b.comment) AS comments,
+        b.prayer_type
+    FROM transactions t
+    LEFT JOIN members m ON t.member_id = m.member_id
+    LEFT JOIN users u ON t.user_id = u.user_id
+    LEFT JOIN expenses e ON t.transaction_id = e.transaction_id
+    LEFT JOIN donations d ON t.transaction_id = d.transaction_id
+    LEFT JOIN thanksgiving th ON t.transaction_id = th.transaction_id
+    LEFT JOIN bag_offering b ON t.transaction_id = b.transaction_id
+    WHERE 1=1
+    """
 
     params = []
 
-    # Filters
     if year != "All":
         query += " AND YEAR(t.transaction_date) = %s"
         params.append(int(year))
-
     if month != "All":
         query += " AND MONTHNAME(t.transaction_date) = %s"
         params.append(month)
-
     if tr_type != "All Types":
         query += " AND t.transaction_type = %s"
         params.append(tr_type)
-
-    if tr_type.lower() == "expense" and exp_type != "All Expense Types":
+    if tr_type == "expense" and exp_type != "All Expense Types":
         query += " AND e.expense_type = %s"
         params.append(exp_type)
 

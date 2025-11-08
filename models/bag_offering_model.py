@@ -24,7 +24,7 @@ def add_bag_offering(member_id, service_date, prayer_type, amount, comment):
 def get_bag_offerings(year="All", month="All"):
     """Fetch all bag offering records (with optional year/month filters)."""
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     query = """
         SELECT 

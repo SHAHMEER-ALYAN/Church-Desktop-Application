@@ -3,6 +3,8 @@ from models.auth_model import authenticate_user
 from gui.main_window import MainWindow
 import app_state
 
+import pymysql as mysql
+
 # --- GLOBAL SESSION STORE ---
 current_user = {
     "user_id": None,
@@ -35,23 +37,45 @@ class LoginWindow(QMainWindow):
         self.setCentralWidget(container)
 
     def handle_login(self):
+        """Attempts to log in and shows a critical error if DB connection fails."""
+        # username = self.username_input.text().strip()
+        # password = self.password_input.text().strip()
+
         username = self.username.text().strip()
         password = self.password.text().strip()
 
-        user = authenticate_user(username, password)
-        if user:
-            app_state.current_user = user  # store globally
-            QMessageBox.information(self, "Success", f"Welcome {user['full_name']}!")
-            # self.open_main_window()
-            self.main_window = MainWindow()
-            self.main_window.show()
-            self.close()
+        if not username or not password:
+            QMessageBox.warning(self, "Input Required", "Please enter both username and password.")
+            return
 
-            # if username == "admin" and password == "admin":
-            #     from gui.login_window import current_user
-            #     current_user["user_id"] = 1
-            #     current_user["username"] = "admin"
-            #     self.main_window.show()
+        try:
+            # This call to login_user will trigger get_connection()
+            success, result_data = authenticate_user(username, password)
 
-        else:
-            QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
+            if success:
+                user_info = result_data  # This is the full user dictionary
+
+                app_state.current_user = user_info
+
+                QMessageBox.information(self, "Login Successful", f"Welcome, {user_info['username']}!")
+                # self.open_main_dashboard()
+                self.main_window = MainWindow()
+                self.close()
+            else:
+                # If failure, result_data is the message string
+                QMessageBox.warning(self, "Login Failed", result_data)
+
+        except ConnectionError as e:
+            # 🚨 THIS IS THE CRITICAL ALERT BOX 🚨
+            QMessageBox.critical(
+                self,
+                "CRITICAL DATABASE ERROR",
+                f"The application could not connect to the database or load configuration.\n\nDetails:\n{e}"
+            )
+        except Exception as e:
+            # Catch all other unexpected Python errors
+            QMessageBox.critical(
+                self,
+                "APPLICATION ERROR",
+                f"An unexpected application error occurred: {type(e).__name__}: {e}"
+            )

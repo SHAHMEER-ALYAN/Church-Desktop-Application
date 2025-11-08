@@ -85,7 +85,7 @@ class ParkingWindow(QMainWindow):
     # --- Set Default Price ---
     def set_default_price(self):
         vtype = self.vehicle_type.currentText()
-        self.amount_input.setText("1000" if vtype == "Car" else "500")
+        self.amount_input.setText("3000" if vtype == "Car" else "1500")
 
     # --- Load Parking Table ---
     def load_parking(self):

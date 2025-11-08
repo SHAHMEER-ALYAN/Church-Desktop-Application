@@ -18,7 +18,7 @@ class ThanksgivingWindow(QMainWindow):
     def __init__(self, member=None):
         super().__init__()
         self.setWindowTitle("Thanksgiving Offerings")
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(950, 600)
 
         # --- Member handling ---
         if not member or not member.get("member_id"):
@@ -30,7 +30,15 @@ class ThanksgivingWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
+        # --- Donor Type Selection ---
+        self.donor_type = QComboBox()
+        self.donor_type.addItems(["Church Member", "Non-Member / Guest"])
+        self.donor_type.currentTextChanged.connect(self.toggle_non_member_fields)
+        layout.addWidget(QLabel("Donor Type:"))
+        layout.addWidget(self.donor_type)
+
         # --- Member Dropdown (for All-Members Mode) ---
+        self.member_dropdown = None
         if self.all_members_mode:
             self.member_dropdown = QComboBox()
             self.member_dropdown.addItem("Select Member", None)
@@ -43,10 +51,19 @@ class ThanksgivingWindow(QMainWindow):
             member_name = f"{self.member['first_name']} {self.member['last_name']}"
             layout.addWidget(QLabel(f"Member: {member_name}"))
 
+        # --- Non-Member Fields ---
+        self.non_member_name = QLineEdit()
+        self.non_member_name.setPlaceholderText("Full Name (for non-members)")
+        self.non_member_phone = QLineEdit()
+        self.non_member_phone.setPlaceholderText("Phone Number")
+        layout.addWidget(QLabel("Non-Member Name:"))
+        layout.addWidget(self.non_member_name)
+        layout.addWidget(QLabel("Non-Member Phone:"))
+        layout.addWidget(self.non_member_phone)
+
         # --- Input fields ---
         self.amount_input = QLineEdit()
         self.amount_input.setPlaceholderText("Enter amount (Rs.)")
-
         self.comment_input = QTextEdit()
         self.comment_input.setPlaceholderText("Enter purpose / thanksgiving comment")
 
@@ -62,9 +79,9 @@ class ThanksgivingWindow(QMainWindow):
 
         # --- Table ---
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
+        self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "Date", "Member", "Purpose", "Amount", "Comment", "Transaction ID"
+            "Date", "Donor", "Phone", "Purpose", "Amount", "Comment", "Transaction ID"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table)
@@ -74,7 +91,16 @@ class ThanksgivingWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+        self.toggle_non_member_fields("Church Member")
         self.load_thanksgivings()
+
+    # --- Toggle non-member input fields ---
+    def toggle_non_member_fields(self, value):
+        is_non_member = value == "Non-Member / Guest"
+        if self.member_dropdown:
+            self.member_dropdown.setEnabled(not is_non_member)
+        self.non_member_name.setEnabled(is_non_member)
+        self.non_member_phone.setEnabled(is_non_member)
 
     # --- Reload thanksgiving records ---
     def load_thanksgivings(self):
@@ -87,13 +113,24 @@ class ThanksgivingWindow(QMainWindow):
         for t in records:
             row = self.table.rowCount()
             self.table.insertRow(row)
+
+            # Determine donor info
+            donor_name = "-"
+            donor_phone = ""
+            if t.get("first_name") or t.get("last_name"):
+                donor_name = f"{t.get('first_name', '')} {t.get('last_name', '')}".strip()
+                donor_phone = t.get("phone", "")
+            elif t.get("donor_name"):
+                donor_name = t.get("donor_name")
+                donor_phone = t.get("donor_phone", "")
+
             self.table.setItem(row, 0, QTableWidgetItem(str(t.get("date", "-"))))
-            member_name = f"{t.get('first_name', '')} {t.get('last_name', '')}".strip() or "-"
-            self.table.setItem(row, 1, QTableWidgetItem(member_name))
-            self.table.setItem(row, 2, QTableWidgetItem(t.get("purpose", "-")))
-            self.table.setItem(row, 3, QTableWidgetItem(f"Rs. {t.get('amount', 0):.2f}"))
-            self.table.setItem(row, 4, QTableWidgetItem(t.get("comment", "")))
-            self.table.setItem(row, 5, QTableWidgetItem(str(t.get("transaction_id", "-"))))
+            self.table.setItem(row, 1, QTableWidgetItem(donor_name))
+            self.table.setItem(row, 2, QTableWidgetItem(donor_phone))
+            self.table.setItem(row, 3, QTableWidgetItem(t.get("purpose", "-")))
+            self.table.setItem(row, 4, QTableWidgetItem(f"Rs. {float(t.get('amount', 0)):.2f}"))
+            self.table.setItem(row, 5, QTableWidgetItem(t.get("comment", "")))
+            self.table.setItem(row, 6, QTableWidgetItem(str(t.get("transaction_id", "-"))))
 
     # --- When user changes member in dropdown ---
     def on_member_change(self):
@@ -115,24 +152,38 @@ class ThanksgivingWindow(QMainWindow):
             return
 
         purpose = self.comment_input.toPlainText().strip()
+        donor_type = self.donor_type.currentText()
 
-        # Determine member_id
-        if self.all_members_mode:
-            member_id = self.member_dropdown.currentData()
-            if not member_id:
-                QMessageBox.warning(self, "Missing Data", "Please select a member first.")
-                return
+        member_id = None
+        donor_name = donor_phone = None
+
+        # Member donor
+        if donor_type == "Church Member":
+            if self.all_members_mode:
+                member_id = self.member_dropdown.currentData()
+                if not member_id:
+                    QMessageBox.warning(self, "Missing Data", "Please select a member first.")
+                    return
+            else:
+                member_id = self.member["member_id"]
+
+        # Non-member donor
         else:
-            member_id = self.member["member_id"]
+            donor_name = self.non_member_name.text().strip()
+            donor_phone = self.non_member_phone.text().strip()
+            if not donor_name or not donor_phone:
+                QMessageBox.warning(self, "Missing Info", "Please enter name and phone number for non-member.")
+                return
 
         comment = self.comment_input.toPlainText().strip()
-        success, transaction_id = add_thanksgiving(member_id, amount, purpose, comment)
+
+        # Pass donor info
+        success, transaction_id = add_thanksgiving(member_id, amount, purpose, comment, donor_name, donor_phone)
 
         if success:
-            member_name = (
+            donor_display = (
                 f"{self.member['first_name']} {self.member['last_name']}"
-                if not self.all_members_mode
-                else self.member_dropdown.currentText()
+                if member_id else f"{donor_name} ({donor_phone})"
             )
 
             receipt_text = (
@@ -140,9 +191,9 @@ class ThanksgivingWindow(QMainWindow):
                 f"Transaction ID: {transaction_id}\n"
                 f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                 f"Transaction Type: Thanksgiving\n"
-                f"Member: {member_name}\n"
+                f"Donor: {donor_display}\n"
                 f"Amount: Rs. {amount:.2f}\n"
-                f"Purpose: {purpose}\n"
+                f"Purpose: {purpose or 'N/A'}\n"
                 f"Entered By: {app_state.current_user['full_name']}\n"
                 "--------------------------------\n"
                 "Thank you for your thanksgiving offering!"
@@ -152,6 +203,8 @@ class ThanksgivingWindow(QMainWindow):
             QMessageBox.information(self, "Success", "Thanksgiving recorded successfully.")
             self.amount_input.clear()
             self.comment_input.clear()
+            self.non_member_name.clear()
+            self.non_member_phone.clear()
             self.load_thanksgivings()
         else:
             QMessageBox.warning(self, "Error", "Failed to record thanksgiving offering.")

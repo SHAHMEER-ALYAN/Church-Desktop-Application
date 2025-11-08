@@ -3,30 +3,31 @@ from datetime import date
 from models.transaction_model import create_transaction
 
 
-def add_thanksgiving(member_id, amount, purpose, comment=""):
+def add_thanksgiving(member_id, amount, purpose, comment="", donor_name=None, donor_phone=None):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
-    # ✅ Create linked transaction (amount stored only in transactions table)
+    # Create linked transaction
     transaction_id = create_transaction(member_id, "thanksgiving", amount)
 
-    # ✅ Insert thanksgiving record (no amount here — avoid redundancy)
+    # Insert thanksgiving record (with donor info)
     cursor.execute("""
-        INSERT INTO thanksgiving (member_id, transaction_id, purpose, comment, date)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (member_id, transaction_id, purpose, comment, date.today()))
+        INSERT INTO thanksgiving (
+            member_id, transaction_id, purpose, comment, date, donor_name, donor_phone
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (member_id, transaction_id, purpose, comment, date.today(), donor_name, donor_phone))
 
     conn.commit()
     cursor.close()
     conn.close()
-
     return True, transaction_id
 
 
 def get_all_thanksgivings():
-    """Fetch all thanksgiving records (all members)."""
+    """Fetch all thanksgiving records (members + non-members)."""
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             tg.thanksgiving_id,
@@ -35,10 +36,13 @@ def get_all_thanksgivings():
             tg.purpose,
             tg.comment,
             tg.date,
+            tg.donor_name,
+            tg.donor_phone,
             tr.amount AS amount,
             tr.transaction_date,
             m.first_name,
-            m.last_name
+            m.last_name,
+            m.phone
         FROM thanksgiving tg
         JOIN transactions tr ON tg.transaction_id = tr.transaction_id
         LEFT JOIN members m ON tg.member_id = m.member_id
@@ -53,7 +57,7 @@ def get_all_thanksgivings():
 def get_thanksgivings_by_member(member_id):
     """Fetch thanksgiving records for a specific member."""
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             tg.thanksgiving_id,
@@ -61,10 +65,13 @@ def get_thanksgivings_by_member(member_id):
             tg.purpose,
             tg.comment,
             tg.date,
+            tg.donor_name,
+            tg.donor_phone,
             tr.amount AS amount,
             tr.transaction_date,
             m.first_name,
-            m.last_name
+            m.last_name,
+            m.phone
         FROM thanksgiving tg
         JOIN transactions tr ON tg.transaction_id = tr.transaction_id
         LEFT JOIN members m ON tg.member_id = m.member_id

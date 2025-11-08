@@ -32,7 +32,7 @@ def create_transaction(member_id, transaction_type, amount):
 def get_all_transactions():
     """Fetch all transactions with member and user info."""
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             t.transaction_id,
@@ -56,7 +56,7 @@ def get_all_transactions():
 
 def get_filtered_transactions(year, month, tr_type, exp_type):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     query = """
     SELECT 

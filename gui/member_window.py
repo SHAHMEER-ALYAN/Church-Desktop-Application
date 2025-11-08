@@ -4,11 +4,24 @@ from PySide6.QtWidgets import (
     QFormLayout, QDateEdit, QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtWidgets import QPushButton, QMenu
-from models.member_model import search_member_by_name, add_member, get_all_members, search_member_by_id
-# from gui.membership_window import TitheWindow
+from PySide6.QtWidgets import QMenu
+
+# --- Core Model Imports ---
+from models.member_model import (
+    search_member_by_name,
+    add_member,
+    get_all_members,
+    search_member_by_id,
+    search_member_by_cnic,
+    search_member_by_card_number,
+    search_member_by_phone  # <-- NEW IMPORT
+)
+# --- Transaction Window Imports ---
 from gui.membership_window import MembershipWindow
 from gui.donation_window import DonationWindow
+from gui.tithe_window import TitheWindow
+from gui.thanksgiving_window import ThanksgivingWindow
+
 
 class MemberWindow(QMainWindow):
     def __init__(self):
@@ -58,10 +71,10 @@ class MemberWindow(QMainWindow):
     # ---------------- LOAD ALL MEMBERS ----------------
     def load_all_members(self):
         """Fetch and display all members in the table."""
+        self.search_box.clear()
         members = get_all_members()
         self.populate_table(members)
 
-    # ---------------- SEARCH MEMBER ----------------
     # ---------------- SEARCH MEMBER ----------------
     def search_member(self):
         keyword = self.search_box.text().strip()
@@ -71,23 +84,39 @@ class MemberWindow(QMainWindow):
 
         members = []
 
-        # --- Search by Member ID (purely numeric and short) ---
-        if keyword.isdigit() and len(keyword) < 6:
-            members = search_member_by_id(int(keyword))
+        # --- PREPROCESSING STEP: Clean the keyword for numeric checks ---
+        cleaned_keyword = keyword.replace('-', '').replace(' ', '')
 
-        # --- Search by CNIC (Pakistani 13-digit number) ---
-        elif keyword.isdigit() and len(keyword) == 13:
-            from models.member_model import search_member_by_cnic
-            members = search_member_by_cnic(keyword)
+        # --- ROBUST SEARCH LOGIC ---
 
-        # --- Search by Membership Card Number (contains letters or dashes) ---
-        elif any(ch.isalpha() for ch in keyword) or "-" in keyword:
-            from models.member_model import search_member_by_card_number
-            members = search_member_by_card_number(keyword)
+        if cleaned_keyword.isdigit():
+            # If the cleaned keyword is purely numeric
 
-        # --- Otherwise, search by name ---
+            if len(cleaned_keyword) == 13:
+                # 1. CNIC Search (Strict 13-digit match)
+                members = search_member_by_cnic(cleaned_keyword)
+
+            elif len(cleaned_keyword) >= 7 and len(cleaned_keyword) <= 12:
+                # 2. Phone Number Search (7 to 12 digits, covering local and mobile)
+                members = search_member_by_phone(cleaned_keyword)
+
+            elif len(cleaned_keyword) < 6:
+                # 3. Member ID Search (Short numeric match)
+                members = search_member_by_id(int(cleaned_keyword))
+
+            else:
+                # 4. Numeric fallback: try card number, then name
+                # Use original keyword for card search as it might include formatting
+                card_results = search_member_by_card_number(keyword)
+                members = card_results if card_results else search_member_by_name(keyword)
+
         else:
-            members = search_member_by_name(keyword)
+            # 5. Alphanumeric/Dashed search (Card Number or Name)
+            # Try card number first (partial match)
+            card_results = search_member_by_card_number(keyword)
+            members = card_results if card_results else search_member_by_name(keyword)
+
+        # --- END ROBUST SEARCH LOGIC ---
 
         if not members:
             QMessageBox.information(self, "No Results", "No members found for your search criteria.")
@@ -113,44 +142,46 @@ class MemberWindow(QMainWindow):
 
             # --- Action Button (+) ---
             action_btn = QPushButton("+")
-            action_btn.clicked.connect(lambda checked, m=member: self.show_action_menu(m))
+            # action_btn.clicked.connect(lambda checked, m=member: self.show_action_menu(m))
+            action_btn.clicked.connect(lambda checked, m=member, b=action_btn: self.show_action_menu(m, b))
             self.member_table.setCellWidget(row_index, 9, action_btn)
 
-    def show_action_menu(self, member):
+    # def show_action_menu(self, member):
+    def show_action_menu(self, member, action_btn):
+        """Displays a context menu for transaction actions."""
         menu = QMenu()
         menu.addAction("Membership", lambda: self.open_membership_window(member))
         menu.addAction("Tithe", lambda: self.open_tithe_window(member))
         menu.addAction("Donation", lambda: self.open_donation_window(member))
         menu.addAction("Thanksgiving", lambda: self.open_thanksgiving_window(member))
-        menu.exec()
+
+        # menu.exec(self.sender().mapToGlobal(self.sender().rect().bottomLeft()))
+        menu.exec(action_btn.mapToGlobal(action_btn.rect().bottomLeft()))
 
     def open_membership_window(self, member):
         """Open the membership management window for this member."""
         self.membership_window = MembershipWindow(member)
-        # self.membership_window = MembershipWindow(member)
         self.membership_window.show()
 
     def open_tithe_window(self, member):
-        from gui.tithe_window import TitheWindow
         self.tithe_window = TitheWindow(member)
         self.tithe_window.show()
+
+    def open_donation_window(self, member):
+        self.donation_window = DonationWindow(member)
+        self.donation_window.show()
+
+    def open_thanksgiving_window(self, member):
+        self.thanksgiving_window = ThanksgivingWindow(member)
+        self.thanksgiving_window.show()
 
     # ---------------- ADD MEMBER DIALOG ----------------
     def open_add_member_dialog(self):
         """Open dialog to add a new member."""
         dialog = AddMemberDialog(self)
         if dialog.exec():
-            self.load_all_members()  # refresh after adding new member
+            self.load_all_members()
 
-    def open_donation_window(self, member):
-        from gui.donation_window import DonationWindow
-        self.donation_window = DonationWindow(member)
-        self.donation_window.show()
-
-    def open_thanksgiving_window(self, member):
-        from gui.thanksgiving_window import ThanksgivingWindow
-        self.thanksgiving_window = ThanksgivingWindow(member)
-        self.thanksgiving_window.show()
 
 # ---------------- ADD MEMBER DIALOG ----------------
 class AddMemberDialog(QDialog):
@@ -167,9 +198,11 @@ class AddMemberDialog(QDialog):
         self.phone = QLineEdit()
         self.membership_card_no = QLineEdit()
         self.nic_no = QLineEdit()
+
         self.dob = QDateEdit()
         self.dob.setCalendarPopup(True)
-        self.dob.setDate(QDate.currentDate())
+        self.dob.setDate(QDate.currentDate().addYears(-20))
+
         self.join_date = QDateEdit()
         self.join_date.setCalendarPopup(True)
         self.join_date.setDate(QDate.currentDate())
@@ -194,8 +227,8 @@ class AddMemberDialog(QDialog):
         last_name = self.last_name.text().strip()
         email = self.email.text().strip()
         phone = self.phone.text().strip()
-        membership_card_no = self.membership_card_no.text().strip()
         nic_no = self.nic_no.text().strip()
+        membership_card_no = self.membership_card_no.text().strip()
         dob = self.dob.date().toString("yyyy-MM-dd")
         join_date = self.join_date.date().toString("yyyy-MM-dd")
 
@@ -209,27 +242,6 @@ class AddMemberDialog(QDialog):
 
         if success:
             QMessageBox.information(self, "Success", message)
-            self.accept()  # close dialog and refresh table
+            self.accept()
         else:
-            QMessageBox.warning(self, "Duplicate Member", message)
-
-    def add_member_to_db(self):
-        first_name = self.first_name.text().strip()
-        last_name = self.last_name.text().strip()
-        email = self.email.text().strip()
-        phone = self.phone.text().strip()
-        nic_no = self.nic_no.text().strip()
-        membership_card_no = self.membership_card_no.text().strip()
-        dob = self.dob.date().toString("yyyy-MM-dd")
-        join_date = self.join_date.date().toString("yyyy-MM-dd")
-
-        if not all([first_name, last_name, email, phone]):
-            QMessageBox.warning(self, "Input Error", "All fields are required.")
-            return
-
-        success, message = add_member(first_name, last_name, email, phone, dob, join_date, nic_no, membership_card_no)
-        if success:
-            QMessageBox.information(self, "Success", message)
-            self.accept()  # close dialog and trigger refresh
-        else:
-            QMessageBox.warning(self, "Duplicate Member", message)
+            QMessageBox.warning(self, "Database Error", message)

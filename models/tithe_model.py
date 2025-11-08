@@ -4,7 +4,7 @@ from models.transaction_model import create_transaction
 
 def get_tithes_by_member(member_id):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             t.tithe_id, 
@@ -27,7 +27,7 @@ def get_tithes_by_member(member_id):
 
 def add_tithe_payment(member, months, year, monthly_amount):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     month_map = {
         "January": 1, "February": 2, "March": 3, "April": 4,
@@ -82,7 +82,7 @@ def add_tithe_payment(member, months, year, monthly_amount):
 
 def get_all_tithes():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             t.tithe_id, 

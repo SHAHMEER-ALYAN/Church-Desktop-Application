@@ -4,10 +4,13 @@ from PySide6.QtWidgets import (
     QMainWindow, QVBoxLayout, QWidget, QLabel, QComboBox, QLineEdit, QTextEdit,
     QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
 )
+from PySide6.QtCore import QSize, \
+    Qt  # QSize was not imported, added it here just in case, but not strictly needed for this file
 
 import app_state
 from gui.receipt_dialog import ReceiptDialog
 from models.expense_model import add_expense, get_all_expenses
+
 
 class ExpenseWindow(QMainWindow):
     def __init__(self):
@@ -17,14 +20,20 @@ class ExpenseWindow(QMainWindow):
 
         layout = QVBoxLayout()
 
-        # --- Add Expense Section ---
-        self.type_combo = QComboBox()
-        self.type_combo.addItems([
+        # --- Expense Types List ---
+        self.EXPENSE_TYPES = [
             "Repair & Maintenance", "Utilities", "Water (Tanker & Drinking Water)",
-            "Event", "Fuel", "Staff Salary", "Clergy Allowances",
+            "Event", "Fuel", "Staff Salary",
+            "Pastor Allowance (Entertainment Allowance)",  # Matches new ENUM value
+            "Church Guest Fund",  # Matches new ENUM value
+            "Clergy Allowances",
             "Refreshment", "Office Expenses", "Financial Support",
             "Staff Loan", "Pastor Loan", "Diocese Loan"
-        ])
+        ]
+
+        # --- Add Expense Section ---
+        self.type_combo = QComboBox()
+        self.type_combo.addItems(self.EXPENSE_TYPES)
 
         self.amount_input = QLineEdit()
         self.amount_input.setPlaceholderText("Enter amount")
@@ -87,7 +96,7 @@ class ExpenseWindow(QMainWindow):
             QMessageBox.warning(self, "Invalid Input", "Please enter a valid amount.")
             return
 
-        amount = float(amount_text)  # ✅ Convert to float
+        amount = float(amount_text)
 
         success, transaction_id = add_expense(expense_type, amount, receipt, comments)
         if success:
@@ -97,7 +106,7 @@ class ExpenseWindow(QMainWindow):
                 f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                 f"Transaction Type: Expense\n"
                 f"Expense Category: {expense_type}\n"
-                f"Amount: -Rs. {abs(amount):.2f}\n"  # ✅ abs() now works correctly
+                f"Amount: -Rs. {abs(amount):.2f}\n"
                 f"Receipt #: {receipt}\n"
                 f"Comments: {comments}\n"
                 f"Entered By: {app_state.current_user['full_name']}\n"
@@ -107,3 +116,8 @@ class ExpenseWindow(QMainWindow):
             receipt_dialog = ReceiptDialog("Expense Receipt", receipt_text)
             receipt_dialog.exec()
             self.load_expenses()
+
+            # Optional: Clear input fields after successful save
+            self.amount_input.clear()
+            self.receipt_input.clear()
+            self.comments_input.clear()

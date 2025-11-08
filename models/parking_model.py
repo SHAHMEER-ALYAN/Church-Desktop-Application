@@ -5,7 +5,7 @@ from datetime import date
 def add_parking_payment(member_id, vehicle_number, phone_number, vehicle_type, amount):
     """Record a parking payment and related transaction."""
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     # Create linked transaction
     transaction_id = create_transaction(member_id, "parking", amount)
@@ -24,7 +24,7 @@ def add_parking_payment(member_id, vehicle_number, phone_number, vehicle_type, a
 
 def get_all_parking():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT 
             p.parking_id,
@@ -48,7 +48,7 @@ def get_all_parking():
 
 def search_parking_by_vehicle(vehicle_number):
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT p.*, t.amount, t.transaction_date, m.first_name, m.last_name
         FROM parking p

@@ -37,7 +37,7 @@ def add_expense(expense_type, amount, receipt_number, comments):
 
 def get_all_expenses():
     conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT e.*, t.amount, t.transaction_date, u.full_name AS entered_by
         FROM expenses e

@@ -6,7 +6,8 @@ from datetime import datetime
 
 # --- IMPORTANT IMPORTS ---
 # Ensure these functions exist in your models/membership_model.py
-from models.membership_model import search_member_by_card, add_membership_payment
+from models.membership_model import  add_membership_payment
+from models.member_model import search_member_by_card_number as search_member_by_card
 from gui.receipt_dialog import ReceiptDialog
 from gui.payment_input_window import PaymentInputWindow
 
@@ -78,17 +79,24 @@ class MembershipLookupWindow(QMainWindow):
 
         # Search member by card number
         member = search_member_by_card(card_number)
+
+        # --- Start of Modification Block ---
         if not member:
+            # Check if the failure was due to a missing member or a deeper issue
             QMessageBox.warning(self, "Not Found", "No member found with this card number.")
             self.info_label.setText("<b style='color:red;'>No matching member found.</b>")
             return
 
         # Display found member info
+        status_text = member.get('status', 'Online')
+        status_color = 'green' if status_text == 'Online' else 'orange'
+
         self.info_label.setText(
             f"<b>Member Found:</b><br>"
             f"Name: {member['first_name']} {member['last_name']}<br>"
-            f"Status: {member.get('status', 'N/A')}"
+            f"Status: <b style='color:{status_color};'>{status_text}</b>"  # Display the status
         )
+        # --- End of Modification Block ---
 
         # --- STEP 1: OPEN PAYMENT INPUT DIALOG ---
         input_dialog = PaymentInputWindow(member, parent=self)

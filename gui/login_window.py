@@ -3,13 +3,16 @@ from models.auth_model import authenticate_user
 from gui.main_window import MainWindow
 import app_state
 
-import pymysql as mysql
 
-# --- GLOBAL SESSION STORE ---
-current_user = {
-    "user_id": None,
-    "username": None,
-}
+# We no longer need this import here
+# import pymysql as mysql
+
+# NOTE: The app_state should be handled by app_state.py,
+# so the following global variable is redundant if app_state is used correctly.
+# current_user = {
+#     "user_id": None,
+#     "username": None,
+# }
 
 class LoginWindow(QMainWindow):
     def __init__(self):
@@ -37,10 +40,10 @@ class LoginWindow(QMainWindow):
         self.setCentralWidget(container)
 
     def handle_login(self):
-        """Attempts to log in and shows a critical error if DB connection fails."""
-        # username = self.username_input.text().strip()
-        # password = self.password_input.text().strip()
-
+        """
+        Attempts to log in. Relies on auth_model to handle connection errors
+        and execute the offline fallback, returning the final status.
+        """
         username = self.username.text().strip()
         password = self.password.text().strip()
 
@@ -49,7 +52,10 @@ class LoginWindow(QMainWindow):
             return
 
         try:
-            # This call to login_user will trigger get_connection()
+            # This call will handle the ConnectionError internally:
+            # 1. If online: Tries MySQL.
+            # 2. If MySQL fails: Catches ConnectionError, shows "Status Update" messagebox,
+            #    and attempts local cache login.
             success, result_data = authenticate_user(username, password)
 
             if success:
@@ -58,22 +64,19 @@ class LoginWindow(QMainWindow):
                 app_state.current_user = user_info
 
                 QMessageBox.information(self, "Login Successful", f"Welcome, {user_info['username']}!")
-                # self.open_main_dashboard()
                 self.main_window = MainWindow()
+                self.main_window.show()  # Must show the main window
                 self.close()
             else:
-                # If failure, result_data is the message string
+                # This catches authentication failures, including the scenario where
+                # both online connection and local cache lookups failed.
                 QMessageBox.warning(self, "Login Failed", result_data)
 
-        except ConnectionError as e:
-            # 🚨 THIS IS THE CRITICAL ALERT BOX 🚨
-            QMessageBox.critical(
-                self,
-                "CRITICAL DATABASE ERROR",
-                f"The application could not connect to the database or load configuration.\n\nDetails:\n{e}"
-            )
+        # 🚨 CRITICAL FIX: The ConnectionError block is REMOVED 🚨
+        # It is handled inside authenticate_user now.
+
         except Exception as e:
-            # Catch all other unexpected Python errors
+            # Catch all other unexpected Python errors (non-database/non-auth related)
             QMessageBox.critical(
                 self,
                 "APPLICATION ERROR",

@@ -6,7 +6,9 @@ from PySide6.QtWidgets import (
 
 import app_state
 from gui.receipt_dialog import ReceiptDialog
-from models.membership_model import add_membership_payment, get_paid_months_for_member
+from models.membership_model import add_membership_payment, get_paid_months_for_year as get_paid_months_for_member
+# from models.member_model import
+from models.membership_model import get_paid_months_for_year
 from models.membership_model import get_memberships_by_member
 
 

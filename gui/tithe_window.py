@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox, QDialog,
-    QFormLayout, QLineEdit, QComboBox, QListWidget, QListWidgetItem, QAbstractItemView
+    QFormLayout, QLineEdit, QComboBox, QListWidget, QListWidgetItem, QAbstractItemView,
+    QCheckBox, QLabel  # Added QCheckBox, QLabel
 )
 from PySide6.QtCore import Qt, QDate
 
@@ -33,7 +34,7 @@ class TitheWindow(QMainWindow):
         self.table = QTableWidget()
         self.table.setColumnCount(6)
         self.table.setHorizontalHeaderLabels([
-            "Tithe ID", "Transaction ID", "Member", "Month", "Year", "Amount"
+            "Tithe ID", "Transaction ID", "Member/Donor", "Month", "Year", "Amount"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table)
@@ -76,7 +77,18 @@ class TitheWindow(QMainWindow):
                 month_name = "-"
 
             transaction_id = str(t.get("transaction_id", "N/A"))
-            member_name = f"{t.get('first_name', '')} {t.get('last_name', '')}".strip() or "-"
+
+            # Logic to show Member Name OR Non-Member Donor Name
+            first = t.get('first_name')
+            last = t.get('last_name')
+            donor = t.get('donor_name')
+
+            if first or last:
+                member_name = f"{first or ''} {last or ''}".strip()
+            elif donor:
+                member_name = f"{donor} (Non-Member)"
+            else:
+                member_name = "Unknown"
 
             row = self.table.rowCount()
             self.table.insertRow(row)
@@ -98,24 +110,42 @@ class AddTitheDialog(QDialog):
         super().__init__()
         self.member = member
         self.setWindowTitle("Add Tithe")
-        self.setFixedSize(400, 550)
+        self.setFixedSize(400, 600)
 
         layout = QFormLayout()
 
-        # 🟢 Member Dropdown (only for all-member mode)
-        self.member_dropdown = None
+        # --- Non-Member Checkbox ---
+        # Only available if we are in "All Members" mode (not adding for specific member)
+        self.non_member_cb = QCheckBox("Non-Member Tithe")
+        if not member.get("member_id"):
+            layout.addRow("", self.non_member_cb)
+            self.non_member_cb.toggled.connect(self.toggle_mode)
+
+        # --- Member Dropdown ---
+        self.member_label = QLabel("Select Member:")
+        self.member_dropdown = QComboBox()
+
         if not member.get("member_id"):
             from models.member_model import get_all_members
             members = get_all_members()
-
-            self.member_dropdown = QComboBox()
             for m in members:
                 full_name = f"{m['first_name']} {m['last_name']}"
                 self.member_dropdown.addItem(full_name, m["member_id"])
 
-            # when user changes member, refresh unpaid months
             self.member_dropdown.currentIndexChanged.connect(self.refresh_months_list)
-            layout.addRow("Select Member:", self.member_dropdown)
+            layout.addRow(self.member_label, self.member_dropdown)
+
+        # --- Non-Member Fields (Hidden by default) ---
+        self.donor_name_label = QLabel("Donor Name:")
+        self.donor_name = QLineEdit()
+        self.donor_name.setPlaceholderText("Enter Name")
+
+        self.donor_phone_label = QLabel("Donor Phone:")
+        self.donor_phone = QLineEdit()
+        self.donor_phone.setPlaceholderText("Enter Phone")
+
+        layout.addRow(self.donor_name_label, self.donor_name)
+        layout.addRow(self.donor_phone_label, self.donor_phone)
 
         # --- Total Amount ---
         self.amount_input = QLineEdit()
@@ -142,36 +172,64 @@ class AddTitheDialog(QDialog):
 
         self.setLayout(layout)
 
-        # Initialize months list
+        # Initial State
+        self.toggle_mode()
+        self.refresh_months_list()
+
+    def toggle_mode(self):
+        """Show/Hide fields based on Non-Member checkbox."""
+        is_non_member = self.non_member_cb.isChecked() if hasattr(self, 'non_member_cb') else False
+
+        # Toggle Member Dropdown visibility
+        if hasattr(self, 'member_dropdown'):
+            self.member_dropdown.setVisible(not is_non_member)
+            self.member_label.setVisible(not is_non_member)
+
+        # Toggle Donor Fields visibility
+        self.donor_name.setVisible(is_non_member)
+        self.donor_name_label.setVisible(is_non_member)
+        self.donor_phone.setVisible(is_non_member)
+        self.donor_phone_label.setVisible(is_non_member)
+
+        # Refresh months (Non-members see all months, Members see unpaid)
         self.refresh_months_list()
 
     def get_selected_member_id(self):
         """Return selected member_id (handles both modes)."""
         if self.member.get("member_id"):
             return self.member["member_id"]
-        elif self.member_dropdown:
+        elif hasattr(self, 'member_dropdown') and not self.non_member_cb.isChecked():
             return self.member_dropdown.currentData()
         return None
 
     def refresh_months_list(self):
-        """Refresh the list of unpaid months for the selected member & year."""
-        from models.tithe_model import get_tithes_by_member
-
-        member_id = self.get_selected_member_id()
-        if not member_id:
-            self.month_list.clear()
-            self.month_list.addItem(QListWidgetItem("(Please select a member first)"))
-            self.month_list.setDisabled(True)
-            return
-
-        year = int(self.year_select.currentText())
+        """Refresh the list of months."""
+        self.month_list.clear()
         all_months = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ]
 
+        # If Non-Member mode, show all months without checking DB history
+        if hasattr(self, 'non_member_cb') and self.non_member_cb.isChecked():
+            for m in all_months:
+                self.month_list.addItem(QListWidgetItem(m))
+            self.month_list.setDisabled(False)
+            return
+
+        # Existing Logic for Members (Check paid history)
+        from models.tithe_model import get_tithes_by_member
+        member_id = self.get_selected_member_id()
+
+        if not member_id:
+            self.month_list.addItem(QListWidgetItem("(Please select a member)"))
+            self.month_list.setDisabled(True)
+            return
+
+        year = int(self.year_select.currentText())
         existing_tithes = get_tithes_by_member(member_id)
         paid_months = []
+
         for t in existing_tithes:
             try:
                 if t["tithe_year"] == year:
@@ -182,7 +240,6 @@ class AddTitheDialog(QDialog):
 
         unpaid_months = [m for m in all_months if m not in paid_months]
 
-        self.month_list.clear()
         for m in unpaid_months:
             self.month_list.addItem(QListWidgetItem(m))
 
@@ -194,10 +251,34 @@ class AddTitheDialog(QDialog):
 
     def save_tithe(self):
         """Save the tithe record(s) into the database."""
-        member_id = self.get_selected_member_id()
-        if not member_id:
-            QMessageBox.warning(self, "Missing Member", "Please select a member.")
-            return
+        is_non_member = self.non_member_cb.isChecked() if hasattr(self, 'non_member_cb') else False
+
+        member_data = {}
+
+        if is_non_member:
+            # VALIDATE NON-MEMBER INPUT
+            name = self.donor_name.text().strip()
+            phone = self.donor_phone.text().strip()
+            if not name:
+                QMessageBox.warning(self, "Input Error", "Donor Name is required.")
+                return
+
+            # Construct dummy member object with ID as None
+            member_data = {
+                'member_id': None,
+                'first_name': name,
+                'last_name': '(Non-Member)',
+                'phone': phone
+            }
+        else:
+            # VALIDATE MEMBER INPUT
+            member_id = self.get_selected_member_id()
+            if not member_id:
+                QMessageBox.warning(self, "Missing Member", "Please select a member.")
+                return
+
+            from models.member_model import get_member_by_id
+            member_data = get_member_by_id(member_id)
 
         try:
             total_amount = float(self.amount_input.text().strip())
@@ -213,14 +294,9 @@ class AddTitheDialog(QDialog):
         year = int(self.year_select.currentText())
         monthly_amount = total_amount / len(selected_months)
 
-        # Ensure no decimal remainder
         if total_amount % len(selected_months) != 0:
             QMessageBox.warning(self, "Invalid Amount", "Amount must divide evenly by number of months.")
             return
-
-        # Get full member record for name display
-        from models.member_model import get_member_by_id
-        member_data = get_member_by_id(member_id)
 
         from models.tithe_model import add_tithe_payment
         success, results = add_tithe_payment(member_data, selected_months, year, monthly_amount)
@@ -232,7 +308,7 @@ class AddTitheDialog(QDialog):
                     f"Transaction ID: {r['transaction_id']}\n"
                     f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                     f"Transaction Type: Tithe\n"
-                    f"Member: {member_data['first_name']} {member_data['last_name']} (ID: {member_id})\n"
+                    f"Donor: {member_data['first_name']} {member_data.get('last_name', '')}\n"
                     f"Amount: Rs. {monthly_amount}\n"
                     f"Month: {r['month']} {r['year']}\n"
                     f"Entered By: {app_state.current_user['full_name']}\n"
@@ -245,4 +321,4 @@ class AddTitheDialog(QDialog):
             QMessageBox.information(self, "Success", "Tithe added successfully.")
             self.close()
         else:
-            QMessageBox.warning(self, "Duplicate Entry", "Some selected months already have a tithe entry.")
+            QMessageBox.warning(self, "Error", f"Failed to add tithe: {results}")

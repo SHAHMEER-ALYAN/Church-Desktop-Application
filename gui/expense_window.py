@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from PySide6.QtWidgets import (
-    QMainWindow, QVBoxLayout, QWidget, QLabel, QComboBox, QLineEdit, QTextEdit,
-    QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox
+    QMainWindow, QWidget, QVBoxLayout, QFormLayout, QComboBox,QTableWidget, QHeaderView,
+    QLineEdit, QPushButton, QMessageBox, QLabel, QDialog, QTextEdit, QTableWidgetItem
 )
-from PySide6.QtCore import QSize, \
-    Qt  # QSize was not imported, added it here just in case, but not strictly needed for this file
+
+from PySide6.QtCore import QSize, Qt
 
 import app_state
 from gui.receipt_dialog import ReceiptDialog
@@ -24,9 +24,9 @@ class ExpenseWindow(QMainWindow):
         self.EXPENSE_TYPES = [
             "Repair & Maintenance", "Utilities", "Water (Tanker & Drinking Water)",
             "Event", "Fuel", "Staff Salary",
-            "Pastor Allowance (Entertainment Allowance)",  # Matches new ENUM value
-            "Church Guest Fund",  # Matches new ENUM value
-            "Clergy Allowances",
+            "Pastor Allowance (Entertainment Allowance)",
+            "Church Guest Fund",
+            "Clergy assessment", # <-- UPDATED: Changed from "Clergy Allowances"
             "Refreshment", "Office Expenses", "Financial Support",
             "Staff Loan", "Pastor Loan", "Diocese Loan"
         ]
@@ -111,7 +111,11 @@ class ExpenseWindow(QMainWindow):
                 f"Comments: {comments}\n"
                 f"Entered By: {app_state.current_user['full_name']}\n"
                 "---------------------------------\n"
-                f"Recorded successfully."
+                "Recorded successfully.\n\n\n"
+                "Prepared by: _____________________\n\n"
+                "Parish Secretary: _____________________\n\n"
+                "Approved by Parish Incharge: _____________________\n\n"
+                "Received by: _____________________ \n"
             )
             receipt_dialog = ReceiptDialog("Expense Receipt", receipt_text)
             receipt_dialog.exec()
